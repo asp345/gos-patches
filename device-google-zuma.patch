@@ -31,31 +31,21 @@ index 1e7421b..ccc0731 100644
 +    device/google/zuma/write_at_commands.sh:vendor/bin/write_at_commands.sh
 diff --git a/write_at_commands.sh b/write_at_commands.sh
 new file mode 100644
-index 0000000..4780c7c
+index 0000000..d7ca47c
 --- /dev/null
 +++ b/write_at_commands.sh
-@@ -0,0 +1,204 @@
+@@ -0,0 +1,193 @@
 +#!/vendor/bin/sh
 +
-+# AT 명령어를 한 줄씩 보내고 결과를 logcat에 기록하는 함수
++MODEM_DEVICE="/dev/umts_router"
++
 +send_at_cmd() {
-+  # logcat에 실행할 명령어 기록 (VoLTE-Config 태그 사용)
-+  log -t VoLTE-Config "Sending: $1"
-+  
-+  # 실제 명령어 전송
-+  echo -e "$1\r" > /dev/umts_router
-+  
-+  # 명령어 실행 성공/실패 여부 확인 및 기록
-+  if [ $? -ne 0 ]; then
-+    # 실패 시 에러(-p e) 레벨로 로그 기록 후 스크립트 종료
-+    log -p e -t VoLTE-Config "FAILURE on command: $1"
-+    exit 1
-+  fi
-+  # 모뎀이 명령어를 처리할 시간을 주기 위한 짧은 지연
++  local command="$1"
++  log -t VoLTE-Config "SEND: $command"
++  echo -e "$command\r" > "$MODEM_DEVICE"
 +  sleep 0.1
 +}
 +
-+# --- 1. 모든 통신사 공통 설정 적용 ---
 +apply_common_settings() {
 +  log -t VoLTE-Config "Applying Common Settings"
 +  send_at_cmd 'AT+GOOGSETNV="UL3.Cap.Phych.supp_of_fdpch",0,"01,00,00,00"'
@@ -120,7 +110,6 @@ index 0000000..4780c7c
 +  send_at_cmd 'AT+GOOGSETNV="ds_NASL3.MM.gea_algorithms",1,"00"'
 +}
 +
-+# --- 2. 통신사별 설정 적용 함수 ---
 +apply_skt_usim() {
 +  log -t VoLTE-Config "Applying SKT USIM Settings"
 +  send_at_cmd 'AT+GOOGSETNV="PSS.AIMS.Payload-AMRWB",0,"64"'
@@ -191,20 +180,25 @@ index 0000000..4780c7c
 +  send_at_cmd 'AT+GOOGSETNV="DS.PSS.AIMS.Audio.Media.RR",0,"9C,04,00,00"'
 +}
 +
-+# --- 3. 메인 로직 실행 ---
++reset_modem() {
++  log -t VoLTE-Config "Resetting modem..."
++  send_at_cmd "AT+CFUN=0"
++  sleep 2
++  send_at_cmd "AT+CFUN=1"
++  sleep 2
++}
 +
 +log -t VoLTE-Config "Starting Unified VoLTE Script"
 +
 +sleep 10
 +
-+# 공통 설정 먼저 적용
 +apply_common_settings
++reset_modem
 +
-+# 쉼표를 기준으로 코드를 분리
++# Modify operator code here. TODO: auto detection
 +OPERATOR_SIM1="45006"
 +OPERATOR_SIM2="45008"
 +
-+# SIM 1 (물리 USIM, 슬롯 0) 처리
 +if [ -n "$OPERATOR_SIM1" ]; then
 +  log -t VoLTE-Config "Processing USIM (Slot 0) with operator code: $OPERATOR_SIM1"
 +  case "$OPERATOR_SIM1" in
@@ -217,8 +211,8 @@ index 0000000..4780c7c
 +  log -t VoLTE-Config "USIM (Slot 0) not detected."
 +fi
 +
-+# SIM 2 (eSIM, 슬롯 1) 처리
-+# OPERATOR_SIM2가 비어있지 않고, SIM1과 다른 경우에만 실행 (듀얼심)
++reset_modem
++
 +if [ -n "$OPERATOR_SIM2" ]; then
 +  log -t VoLTE-Config "Processing eSIM (Slot 1) with operator code: $OPERATOR_SIM2"
 +  case "$OPERATOR_SIM2" in
@@ -231,11 +225,6 @@ index 0000000..4780c7c
 +  log -t VoLTE-Config "eSIM (Slot 1) not detected."
 +fi
 +
-+# 모든 설정 적용 후 모뎀 재시작
-+log -t VoLTE-Config "All settings applied. Resetting modem..."
-+send_at_cmd "AT+CFUN=0"
-+sleep 2
-+send_at_cmd "AT+CFUN=1"
-+
-+log -t VoLTE-Config "Unified VoLTE Script finished successfully."
++reset_modem
++log -t VoLTE-Config "Korea VoLTE Script finished successfully."
 +
