@@ -10,17 +10,19 @@ index 6146f4d..b0c4a3a 100644
 +/vendor/bin/write_at_commands\.sh   u:object_r:write_at_cmd_exec:s0
 diff --git a/radio/write_at_cmd.te b/radio/write_at_cmd.te
 new file mode 100644
-index 0000000..fe821b8
+index 0000000..808e55b
 --- /dev/null
 +++ b/radio/write_at_cmd.te
-@@ -0,0 +1,10 @@
+@@ -0,0 +1,12 @@
 +type write_at_cmd, domain;
 +type write_at_cmd_exec, exec_type, vendor_file_type, file_type;
 +init_daemon_domain(write_at_cmd)
-+allow write_at_cmd radio_device:chr_file rw_file_perms;
++allow write_at_cmd radio_device:chr_file { rw_file_perms ioctl };
 +allow write_at_cmd logd:fd use;
 +allow write_at_cmd logd_socket:sock_file write;
 +allow shell write_at_cmd_exec:file getattr;
 +allow write_at_cmd shell_exec:file execute_no_trans;
 +allow write_at_cmd toolbox_exec:file { read getattr execute open };
-+allow write_at_cmd radio_device:chr_file ioctl;
++get_prop(write_at_cmd, telephony_status_prop)
++allow write_at_cmd vendor_toolbox_exec:file { execute execute_no_trans read open };
++
