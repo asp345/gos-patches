@@ -1,0 +1,156 @@
+diff --git a/conf/init.zuma.grapheneos.rc b/conf/init.zuma.grapheneos.rc
+index 46d79eb..f132c0a 100644
+--- a/conf/init.zuma.grapheneos.rc
++++ b/conf/init.zuma.grapheneos.rc
+@@ -33,3 +33,15 @@ on property:sys.port_security_mode=charging-only
+ on property:sys.port_security_mode=ports_enabled
+     write /sys/devices/platform/10cb0000.hsi2c/i2c-11/11-0025/data_path_enable 1
+     write /sys/devices/platform/10cb0000.hsi2c/i2c-11/11-0025/cc_toggle_enable 1
++
++service write_at_cmd /vendor/bin/write_at_commands.sh
++    class main
++    user system
++    group system
++    oneshot
++    disabled
++
++on property:sys.boot_completed=1
++    setprop persist.dbg.volte_avail_ovr 1
++    start write_at_cmd
++
+diff --git a/device-common.mk b/device-common.mk
+index 1e7421b..ccc0731 100644
+--- a/device-common.mk
++++ b/device-common.mk
+@@ -73,3 +73,6 @@ PRODUCT_COPY_FILES += \
+        device/google/zuma/conf/init.eng.memtag.rc:$(TARGET_COPY_OUT_VENDOR)/etc/init/init.eng.memtag.rc
+ endif
+ endif
++
++PRODUCT_COPY_FILES += \
++    device/google/zuma/write_at_commands.sh:vendor/bin/write_at_commands.sh
+diff --git a/write_at_commands.sh b/write_at_commands.sh
+new file mode 100644
+index 0000000..97102c3
+--- /dev/null
++++ b/write_at_commands.sh
+@@ -0,0 +1,119 @@
++#!/system/bin/sh
++
++
++sleep 3
++log -t write_at_cmd "Log Start at $(date)"
++
++send_at_cmd() {
++  log -t write_at_cmd "Attempting to send: $1"
++  
++  echo -e "$1\r" > /dev/umts_router
++  
++  if [ $? -ne 0 ]; then
++    log -t write_at_cmd "!!! FAILURE on command: $1"
++    exit 1
++  else
++    log -t write_at_cmd "Success."
++  fi
++  sleep 0.3
++}
++
++log -t write_at_cmd "Applying General Settings"
++send_at_cmd 'ATI'
++send_at_cmd 'AT+GOOGSETNV="UL3.Cap.Phych.supp_of_fdpch",0,"01,00,00,00"'
++send_at_cmd 'AT+GOOGSETNV="UL3.Cap.Phych.supp_of_Efdpch",0,"01,00,00,00"'
++send_at_cmd 'AT+GOOGSETNV="UL3.Cap.Phych.supp_ul_dtx",0,"00"'
++send_at_cmd 'AT+GOOGSETNV="UL3.Cap.Phych.slotFormat4",0,"00,00,00,00"'
++send_at_cmd 'AT+GOOGSETNV="UL3.Cap.Multi.supp_IRAT PS HO to E-UTRA",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="UL3.Cap.MultiCellSupport_DC_HSDPA",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="UL3.Etc.FastDormancyT323Rel8Support",0,"01,00,00,00"'
++send_at_cmd 'AT+GOOGSETNV="UECAPA_INTRA_FREQ_SI_ACQ_FOR_HO",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="UECAPA_INTER_FREQ_SI_ACQ_FOR_HO",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="UECAPA_UTRAN_SI_ACQ_FOR_HO",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="UECAPA_PDCP_ROHC_PROFILES",3,"00"'
++send_at_cmd 'AT+GOOGSETNV="UECAPA_REL10_FOURLAYER_TM3TM4",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="UECAPA_REL10_ORIG_FOURLAYER_TM3TM4",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="UECAPA_REL10_CA_INDEX",0,"01,00,00,00"'
++send_at_cmd 'AT+GOOGSETNV="UECAPA_REL10_MIMO_CAPA_DL",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="UECAPA_REL10_MIMO_CAPA_UL",0,"02"'
++send_at_cmd 'AT+GOOGSETNV="UECAPA_REL10_MODIFIED_MPR_BEHAVIOR",0,"00,00,00,C0"'
++send_at_cmd 'AT+GOOGSETNV="UECAPA_REL10_FGI103",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="UECAPA_REL12_EXTENDED_MAX_MEASID_SUPPORT",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="UECAPA_REL14_DIFF_FALLBACKCOMB",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="NR.CONFIG.MODE",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="NR.ENDC.MODE",0,"11"'
++send_at_cmd 'AT+GOOGSETNV="DS.NR.CONFIG.MODE",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="DS.NR.ENDC.MODE",0,"11"'
++send_at_cmd 'AT+GOOGSETNV="NASU.NR.CONFIG.MODE",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="DS.NASU.NR.CONFIG.MODE",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="!NRCAPA.Switch.DssFeature",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="!NRCAPA.Gen.DynamicPowerSharing",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="PSS.AIMS.DYNAMIC_OPERATORSPEC_FLAG",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="PSS.AIMS.ENABLE.RPORT-InVia-Header",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="PSS.AIMS.Payload-EVS",0,"6E"'
++send_at_cmd 'AT+GOOGSETNV="PSS.AIMS.Audio.Media.RS",0,"00,00,00,00"'
++send_at_cmd 'AT+GOOGSETNV="PSS.AIMS.Audio.Media.RR",0,"20,03,00,00"'
++send_at_cmd 'AT+GOOGSETNV="DS.PSS.AIMS.Payload-EVS",0,"6E"'
++send_at_cmd 'AT+GOOGSETNV="DS.PSS.AIMS.Audio.Media.RS",0,"00,00,00,00"'
++send_at_cmd 'AT+GOOGSETNV="DS.PSS.AIMS.Audio.Media.RR",0,"20,03,00,00"'
++send_at_cmd 'AT+GOOGSETNV="DS.PSS.AIMS.ENABLE.RPORT-InVia-Header",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="DS.PSS.AIMS.DYNAMIC_OPERATORSPEC_FLAG",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="DS.PSS.AIMS.ACCESSTYPE.SUPPORT",0,"00"'
++send_at_cmd 'AT+GOOGSETNV="!NRSM.MsSupportLocalAddrTFTRequest",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="!SAEL3.PCO_IPV4_MTU_MAX_SIZE",0,"DC,05"'
++send_at_cmd 'AT+GOOGSETNV="!SAEL3.IMS_PCO_IPV4_MTU_MAX_SIZE",0,"DC,05"'
++send_at_cmd 'AT+GOOGSETNV="!SAEL3.EXTPCO_REQUEST",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="!SAEL3.ENABLE_GUARD_T_FOR_WAIT_ATTACHAPN",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="!SAEL3.DISABLE_IPV4_MTU_IN_PCO",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="!SAEL3.Dual_IP_PDP",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="!SAEL3.PDN_SM_PDU_DN_REQ_CONTAINER",0,"00"'
++send_at_cmd 'AT+GOOGSETNV="!SAEL3_DS.PCO_IPV4_MTU_MAX_SIZE",0,"DC,05"'
++send_at_cmd 'AT+GOOGSETNV="!SAEL3_DS.IMS_PCO_IPV4_MTU_MAX_SIZE",0,"DC,05"'
++send_at_cmd 'AT+GOOGSETNV="!SAEL3_DS.EXTPCO_REQUEST",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="!SAEL3_DS.ENABLE_GUARD_T_FOR_WAIT_ATTACHAPN",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="!SAEL3_DS.DISABLE_IPV4_MTU_IN_PCO",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="HCOMMON.MM.LCS_VA_capability",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="NASL3.MM.umts_fdd",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="NASL3.MM.GeranFeaturePack1",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="NASL3.MM.gea_algorithms",1,"00"'
++send_at_cmd 'AT+GOOGSETNV="NASL3.SM.NW Initiated Secondary PDP Activation Support",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="ds_NASL3.MM.umts_fdd",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="ds_NASL3.MM.GeranFeaturePack1",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="ds_NASL3.MM.gea_algorithms",1,"00"'
++
++log -t write_at_cmd "Applying LGU Settings"
++send_at_cmd 'AT+GOOGSETNV="PSS.AIMS.Payload-AMRWB",0,"64"'
++send_at_cmd 'AT+GOOGSETNV="PSS.AIMS.Payload-AMRWB",1,"FF"'
++send_at_cmd 'AT+GOOGSETNV="PSS.AIMS.Payload-AMRNB",1,"FF"'
++send_at_cmd 'AT+GOOGSETNV="PSS.AIMS.Payload-DTMF",0,"65"'
++send_at_cmd 'AT+GOOGSETNV="PSS.AIMS.Payload-DTMF.WB",0,"6B"'
++send_at_cmd 'AT+GOOGSETNV="PSS.AIMS.Audio.Media.RR",0,"9C,04,00,00"'
++send_at_cmd 'AT+GOOGSETNV="DS.PSS.AIMS.Payload-AMRWB",0,"64"'
++send_at_cmd 'AT+GOOGSETNV="DS.PSS.AIMS.Payload-AMRWB",1,"FF"'
++send_at_cmd 'AT+GOOGSETNV="DS.PSS.AIMS.Payload-AMRNB",1,"FF"'
++send_at_cmd 'AT+GOOGSETNV="DS.PSS.AIMS.Payload-DTMF",0,"65"'
++send_at_cmd 'AT+GOOGSETNV="DS.PSS.AIMS.Payload-DTMF.WB",0,"6B"'
++send_at_cmd 'AT+GOOGSETNV="DS.PSS.AIMS.Audio.Media.RR",0,"9C,04,00,00"'
++
++log -t write_at_cmd "Applying KT Settings"
++send_at_cmd 'AT+GOOGSETNV="PSS.AIMS.Video.Codec.H264.Baseline.Profile",0,"08"'
++send_at_cmd 'AT+GOOGSETNV="PSS.AIMS.Audio.Capability",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="PSS.AIMS.Call.End.Condition",0,"0E"'
++send_at_cmd 'AT+GOOGSETNV="!SAEL3.CATS_enabled",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="NASL3.MM.Enable_Quick_Rollback_To_Lte_Pdp",0,"01"'
++send_at_cmd 'AT+GOOGSETNV="DS.PSS.AIMS.Payload-AMRWB",0,"62"'
++send_at_cmd 'AT+GOOGSETNV="DS.PSS.AIMS.Payload-AMRWB",1,"61"'
++send_at_cmd 'AT+GOOGSETNV="DS.PSS.AIMS.Payload-AMRNB",0,"65"'
++send_at_cmd 'AT+GOOGSETNV="DS.PSS.AIMS.Payload-AMRNB",1,"64"'
++send_at_cmd 'AT+GOOGSETNV="DS.PSS.AIMS.Payload-DTMF",0,"66"'
++send_at_cmd 'AT+GOOGSETNV="DS.PSS.AIMS.Payload-DTMF.WB",0,"63"'
++
++log -t write_at_cmd "All settings applied. Resetting modem"
++send_at_cmd "AT+CFUN=0"
++sleep 2
++send_at_cmd "AT+CFUN=1"
++sleep 5
++
++log -t write_at_cmd "Log End: Korea VoLTE Script Finished Successfully"
++exit 0
++
