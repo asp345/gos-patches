@@ -1,6 +1,6 @@
 # GrapheneOS에 VoLTE 패치 스크립트 추가하기
 
-adevtool로 vendor file들을 다운로드 받은 이후,  vendor/google_devices/<codename>/ 디렉토리 내의 다음 파일들을 수정하면 됩니다. codename은 픽셀 8 (shiba) 기준입니다.
+adevtool로 vendor file들을 다운로드 받은 이후,  vendor/google_devices/\<codename\>/ 디렉토리 내의 다음 파일들을 수정하면 됩니다. codename은 픽셀 8 (shiba) 기준입니다.
 
 1. shiba.mk 마지막에 다음 내용 추가
 ```
